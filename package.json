@@ -1,0 +1,8 @@
+{
+  "name": "fuck-scroller",
+  "version": "1.0.0",
+  "description": "PC and Moblie scrollers are quite annoying for me for a long time. Now, it's time to conquer, crush and tame it.",
+  "main": "index.js",
+  "author": "Bowen Zhong <bz4e14@soton.ac.uk>",
+  "license": "MIT"
+}
