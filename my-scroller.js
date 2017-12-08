@@ -1,8 +1,10 @@
 class MyScroller {
-  constructor (elem) {
+  constructor (elem, defaultDuration, edgeOffset) {
     this.elem = elem;
     this._docElem = document.documentElement;
     this._body = document.scrollingElement || document.body;
+    this.defaultDuration = defaultDuration || 999;
+    this._scrollTimeoutId = undefined;
   }
 
 
@@ -11,7 +13,7 @@ class MyScroller {
   }
 
   _getDocY () {
-    return window.scrollY || this._docElem.scrollTop;
+    return window.scrollY || this._docElem.scrollTop; // pixles already scrolled up
   }
 
   _getHeight () {
@@ -24,9 +26,17 @@ class MyScroller {
   }
 
   _nativeSmoothScrollEnable (elem) {
-    console.log(window.getComputedStyle(elem)['scroll-behavior']);
-    return ('getComputedStyle' in window) && // support from IE 9
+    return ('getComputedStyle' in window) && // support since IE 9
       window.getComputedStyle(elem)['scroll-behavior'] === 'smooth';
+  }
+
+  _setScrollTimeoutId (id) {
+    this._scrollTimeoutId = id;
+  }
+
+  _stopScroll () {
+    clearTimeout(this._scrollTimeoutId);
+    this._setScrollTimeoutId(0);
   }
 
 
@@ -42,7 +52,34 @@ class MyScroller {
         callback();
       }
     } else {
-      console.log(1111);
+      let startY = this._getDocY();
+      let distance = Math.max(0, targetY) - startY;
+      let startTime = new Date().getTime();
+      duration = duration || Math.min(Math.abs(distance), this.defaultDuration);
+      // console.log(duration);
+
+      (function loopScroll () {
+        setTimeout(() => {
+          let p = Math.min(1, (Date.now() - startTime) / duration);
+          let y = Math.max(0, Math.floor(startY + distance*(p < 0.5 ? 2*p*p : p*(4 - p*2)-1)));
+          console.log(y);
+          this._toY(y);
+  
+          /**
+           * reference: 
+           * https://developer.mozilla.org/en-US/docs/Web/API/Element/scrollHeight#Problems_and_solutions
+           */
+          if (p < 1 && (this._getHeight() + y) < this._body.scrollHeight) {
+            loopScroll()
+          } else {
+            setTimeout(this._stopScroll, 99);
+            if (callback) {
+              callback();
+            }
+          }
+        }, 9);
+      })()
+
     }
   }
 

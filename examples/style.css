@@ -1,6 +1,6 @@
-html {
+/* html {
   scroll-behavior: smooth;
-}
+} */
 
 .list {
   width: 100%;
@@ -12,4 +12,8 @@ html {
   color: #ffffff;
   text-align: center;
   line-height: 100px;
+}
+
+button {
+  margin-bottom: 80px;
 }
