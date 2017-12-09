@@ -32,7 +32,9 @@
     let myScroller = new MyScroller(elem);
 
     function scrollHandle () {
-      myScroller.scrollToY(100,1000);
+      // myScroller.scrollToY(100,1000);
+      let element = document.querySelector('.list-2');
+      myScroller.scrollToElem(element, 1000);
     }
   </script>
 </body>

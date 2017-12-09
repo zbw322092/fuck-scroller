@@ -1,9 +1,12 @@
 class MyScroller {
-  constructor (elem, defaultDuration, edgeOffset) {
-    this.elem = elem;
+  constructor (defaultDuration, edgeOffset) {
+    this.defaultDuration = defaultDuration || 999;
+    if (!edgeOffset && edgeOffset !== 0) {
+      this.edgeOffset = 9; // default 9 pixel edge offset
+    }
+
     this._docElem = document.documentElement;
     this._body = document.scrollingElement || document.body;
-    this.defaultDuration = defaultDuration || 999;
     this._scrollTimeoutId = undefined;
   }
 
@@ -20,8 +23,8 @@ class MyScroller {
     return window.innerHeight || this._docElem.clientHeight;
   }
 
-  _getTopOf () {
-    return this.elem.getBoundingClientRect().top +
+  _getTopOf (elem) {
+    return elem.getBoundingClientRect().top +
       this._getDocY() - this._docElem.offsetTop;
   }
 
@@ -39,7 +42,16 @@ class MyScroller {
     this._setScrollTimeoutId(0);
   }
 
+  _getTopYPositionWithOffset (elem) {
+    return Math.max(0, this._getTopOf(elem) - this.edgeOffset); // default scroll to page top
+  }
 
+  /**
+   * scroll to Y position
+   * @param {number} targetY Y postion in pixel
+   * @param {number} duration scroll duration in ms
+   * @param {number} callback callback function executed after scroll end
+   */
   scrollToY (targetY, duration, callback) {
     this._stopScroll();
     /**
@@ -83,4 +95,15 @@ class MyScroller {
     }
   }
 
+
+  /**
+   * scroll to target element
+   * @param {object} elem scroll to target element
+   * @param {number} duration scroll duration in ms
+   * @param {number} callback callback function executed after scroll end
+   */
+  scrollToElem (elem, duration, callback) {
+    let YPosition = this._getTopYPositionWithOffset(elem);
+    this.scrollToY(YPosition, duration, callback);
+  }
 }
