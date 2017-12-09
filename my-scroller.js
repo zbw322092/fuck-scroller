@@ -41,6 +41,7 @@ class MyScroller {
 
 
   scrollToY (targetY, duration, callback) {
+    this._stopScroll();
     /**
      * if duration is 0 or smaller than 0, and 'scroll-behavior' is set as
      * smooth on document.scrollingElement or document.body, we use native
@@ -56,13 +57,13 @@ class MyScroller {
       let distance = Math.max(0, targetY) - startY;
       let startTime = new Date().getTime();
       duration = duration || Math.min(Math.abs(distance), this.defaultDuration);
-      // console.log(duration);
 
-      (function loopScroll () {
+      let loopScroll;
+      (loopScroll = () => {
         setTimeout(() => {
           let p = Math.min(1, (Date.now() - startTime) / duration);
           let y = Math.max(0, Math.floor(startY + distance*(p < 0.5 ? 2*p*p : p*(4 - p*2)-1)));
-          console.log(y);
+          console.log('y distance: ', y);
           this._toY(y);
   
           /**
@@ -72,14 +73,13 @@ class MyScroller {
           if (p < 1 && (this._getHeight() + y) < this._body.scrollHeight) {
             loopScroll()
           } else {
-            setTimeout(this._stopScroll, 99);
+            setTimeout(this._stopScroll.bind(this), 99);
             if (callback) {
               callback();
             }
           }
         }, 9);
       })()
-
     }
   }
 
