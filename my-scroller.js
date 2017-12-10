@@ -141,4 +141,19 @@ class MyScroller {
       callback();
     }
   }
+
+  /**
+   * 
+   * @param {object} elem target element
+   * @param {number} duration scroll duration in ms
+   * @param {number} offset offset in pixel
+   * @param {function} callback callback function executed after scroll end
+   */
+  scrollToCenterOf(elem, duration, offset, callback) {
+    let absTop = this._getAbsoluteTopOf(elem);
+    let halfHeight = this._getHeight() / 2;
+    offset = offset || elem.getBoundingClientRect().height / 2;
+
+    this.scrollToY(Math.max(0, absTop - halfHeight + offset), duration, callback);
+  }
 }

@@ -26,6 +26,8 @@
   <div class="list list-9">9</div>
   <div class="list list-big" onclick="scrollHandle()">BIG</div>
 
+  <div class="thin-red-line"></div>
+
   <button onclick="scrollHandle()">Click To Scroll</button>
 
   <script src="../my-scroller.js"></script>
@@ -35,9 +37,9 @@
 
     function scrollHandle () {
       // myScroller.scrollToY(100,1000);
-      let element = document.querySelector('.list-big');
+      let element = document.querySelector('.list-4');
       // myScroller.scrollToElem(element, 1000);
-      myScroller.scrollIntoView(element, 1000);
+      myScroller.scrollToCenterOf(element, 1000, 0);
     }
   </script>
 </body>

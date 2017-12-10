@@ -18,6 +18,15 @@
   height: 800px;
 }
 
+.thin-red-line {
+  position: fixed;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 100%;
+  height: 1px;
+  border: 1px solid #ff5346;
+}
+
 button {
   margin-bottom: 80px;
 }
