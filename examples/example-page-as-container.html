@@ -38,7 +38,10 @@
     function scrollHandle () {
       // myScroller.scrollToY(100,1000);
       let element = document.querySelector('.list-4');
-      myScroller.scrollToElem(element, 1000);
+      myScroller.scrollToElem(element, 8000);
+      setTimeout(() => {
+        myScroller._stopScroll();
+      },2000);
       // myScroller.scrollToCenterOf(element, 1000, 0);
     }
   </script>
