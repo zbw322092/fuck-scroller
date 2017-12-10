@@ -1,32 +1,54 @@
 class MyScroller {
-  constructor (defaultDuration, edgeOffset) {
-    // this.container = container;
+  constructor (container, defaultDuration, edgeOffset) {
+    if (Object.prototype.toString.call(container) !== "[object HTMLDivElement]") {
+      // if container is not provided, default container is this webpage
+      container = document.scrollingElement || document.body;
+      this._customizedContainer = false;
+    } else {
+      this._customizedContainer = true;
+    }
     this.defaultDuration = defaultDuration || 999;
     if (!edgeOffset && edgeOffset !== 0) {
       this.edgeOffset = 9; // default 9 pixel edge offset
     }
 
     this._docElem = document.documentElement;
-    this._body = document.scrollingElement || document.body;
+    this._container = container;
     this._scrollTimeoutId = undefined;
   }
 
 
   _toY (y) {
-    window.scrollTo(0, y);
+    if (this._customizedContainer) {
+      this._container.scrollTop = y;
+    } else {
+      window.scrollTo(0, y);
+    }
   }
 
   _scrolledUp () {
-    return window.scrollY || this._docElem.scrollTop; // pixles already scrolled up
+    if (this._customizedContainer) {
+      return this._container.scrollTop;
+    } else {
+      return window.scrollY || this._docElem.scrollTop; // pixles already scrolled up
+    }
   }
 
   _getHeight () {
-    return window.innerHeight || this._docElem.clientHeight;
+    if (this._customizedContainer) {
+      return Math.min(this._container.clientHeight, window.innerHeight || docElem.clientHeight);
+    } else {
+      return window.innerHeight || this._docElem.clientHeight;
+    }
   }
 
   _getAbsoluteTopOf (elem) {
-    return elem.getBoundingClientRect().top +
-      this._scrolledUp() - this._docElem.offsetTop;
+    if (this._customizedContainer) {
+      return elem.offsetTop;
+    } else {
+      return elem.getBoundingClientRect().top +
+        this._scrolledUp() - this._docElem.offsetTop;
+    }
   }
 
   _nativeSmoothScrollEnable (elem) {
@@ -60,7 +82,7 @@ class MyScroller {
      * smooth on document.scrollingElement or document.body, we use native
      * window.scrollTo method to scroll page.
      */
-    if (duration <= 0 || this._nativeSmoothScrollEnable(this._body)) {
+    if (duration <= 0 || this._nativeSmoothScrollEnable(this._container)) {
       this._toY(targetY);
       if (callback) {
         callback();
@@ -83,7 +105,7 @@ class MyScroller {
            * reference: 
            * https://developer.mozilla.org/en-US/docs/Web/API/Element/scrollHeight#Problems_and_solutions
            */
-          if (p < 1 && (this._getHeight() + y) < this._body.scrollHeight) {
+          if (p < 1 && (this._getHeight() + y) < this._container.scrollHeight) {
             loopScroll()
           } else {
             setTimeout(this._stopScroll.bind(this), 99);
