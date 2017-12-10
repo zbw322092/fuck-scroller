@@ -1,5 +1,6 @@
 class MyScroller {
   constructor (defaultDuration, edgeOffset) {
+    // this.container = container;
     this.defaultDuration = defaultDuration || 999;
     if (!edgeOffset && edgeOffset !== 0) {
       this.edgeOffset = 9; // default 9 pixel edge offset
@@ -15,7 +16,7 @@ class MyScroller {
     window.scrollTo(0, y);
   }
 
-  _getDocY () {
+  _scrolledUp () {
     return window.scrollY || this._docElem.scrollTop; // pixles already scrolled up
   }
 
@@ -23,9 +24,9 @@ class MyScroller {
     return window.innerHeight || this._docElem.clientHeight;
   }
 
-  _getTopOf (elem) {
+  _getAbsoluteTopOf (elem) {
     return elem.getBoundingClientRect().top +
-      this._getDocY() - this._docElem.offsetTop;
+      this._scrolledUp() - this._docElem.offsetTop;
   }
 
   _nativeSmoothScrollEnable (elem) {
@@ -42,8 +43,8 @@ class MyScroller {
     this._setScrollTimeoutId(0);
   }
 
-  _getTopYPositionWithOffset (elem) {
-    return Math.max(0, this._getTopOf(elem) - this.edgeOffset); // default scroll to page top
+  _getAbsoluteTopOfWithOffset (elem) {
+    return Math.max(0, this._getAbsoluteTopOf(elem) - this.edgeOffset); // default scroll to page top
   }
 
   /**
@@ -65,7 +66,7 @@ class MyScroller {
         callback();
       }
     } else {
-      let startY = this._getDocY();
+      let startY = this._scrolledUp();
       let distance = Math.max(0, targetY) - startY;
       let startTime = new Date().getTime();
       duration = duration || Math.min(Math.abs(distance), this.defaultDuration);
@@ -100,10 +101,44 @@ class MyScroller {
    * scroll to target element
    * @param {object} elem scroll to target element
    * @param {number} duration scroll duration in ms
-   * @param {number} callback callback function executed after scroll end
+   * @param {function} callback callback function executed after scroll end
    */
   scrollToElem (elem, duration, callback) {
-    let YPosition = this._getTopYPositionWithOffset(elem);
+    let YPosition = this._getAbsoluteTopOfWithOffset(elem);
     this.scrollToY(YPosition, duration, callback);
+  }
+
+  /**
+   * Scroll element into view if necessary
+   * @param {object} elem target element
+   * @param {number} duration scroll duration in ms
+   * @param {function} callback callback function executed after scroll end
+   */
+  scrollIntoView (elem, duration, callback) {
+    let elemHeight = elem.getBoundingClientRect().height;
+    let elemBottomAbsY = this._getAbsoluteTopOf(elem) + elemHeight;
+    let windowHeight = this._getHeight();
+    let y = this._scrolledUp();
+    let windowAbsoluteBottomY = y + windowHeight;
+
+    if (this._getAbsoluteTopOfWithOffset(elem) < y || 
+      (elemHeight + this.edgeOffset) > windowHeight) {
+      /**
+       * Element top is clipped by screen top edge or element higher than screen.
+       * Place element at the TOP of window, with offset.
+       */
+      this.scrollToElem(elem, duration, callback);
+    } else if ((elemBottomAbsY + this.edgeOffset) > windowAbsoluteBottomY) {
+      /**
+       * Element botton is clipped by screen bottom edge.
+       * Place element at the BOTTOM of window, with offset.
+       */ 
+      this.scrollToY(elemBottomAbsY - windowHeight + this.edgeOffset, duration, callback);
+    } else if (callback) {
+      /**
+       * no scroll needed, just executing callback if provided.
+       */
+      callback();
+    }
   }
 }

@@ -12,6 +12,8 @@
 </head>
 
 <body>
+  <button onclick="scrollHandle()">Click To Scroll</button>
+
   <div class="list list-0">0</div>
   <div class="list list-1">1</div>
   <div class="list list-2">2</div>
@@ -22,19 +24,20 @@
   <div class="list list-7">7</div>
   <div class="list list-8">8</div>
   <div class="list list-9">9</div>
+  <div class="list list-big" onclick="scrollHandle()">BIG</div>
 
   <button onclick="scrollHandle()">Click To Scroll</button>
 
   <script src="../my-scroller.js"></script>
 
   <script>
-    let elem = document.querySelector('button');
-    let myScroller = new MyScroller(elem);
+    let myScroller = new MyScroller();
 
     function scrollHandle () {
       // myScroller.scrollToY(100,1000);
-      let element = document.querySelector('.list-2');
-      myScroller.scrollToElem(element, 1000);
+      let element = document.querySelector('.list-big');
+      // myScroller.scrollToElem(element, 1000);
+      myScroller.scrollIntoView(element, 1000);
     }
   </script>
 </body>
