@@ -1,0 +1,18 @@
+{
+  "name": "scroller-3-jumper",
+  "version": "1.0.0",
+  "author": "Bowen Zhong <bz4e14@soton.ac.uk>",
+  "license": "MIT",
+  "devDependencies": {
+    "babel-core": "^6.26.0",
+    "babel-plugin-external-helpers": "^6.22.0",
+    "babel-preset-es2015-rollup": "^3.0.0",
+    "babel-preset-stage-0": "^6.24.1",
+    "rollup-plugin-babel": "^3.0.2",
+    "rollup-plugin-node-resolve": "^3.0.0"
+  },
+  "scripts": {
+    "build": "rollup -c",
+    "dev": "rollup -c -w -m inline"
+  }
+}

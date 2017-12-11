@@ -51,7 +51,7 @@ class MyScroller {
     }
   }
 
-  _nativeSmoothScrollEnable (elem) {
+  _nativeSmoothScrollEnabled (elem) {
     return ('getComputedStyle' in window) && // support since IE 9
       window.getComputedStyle(elem)['scroll-behavior'] === 'smooth';
   }
@@ -87,7 +87,7 @@ class MyScroller {
      * smooth on document.scrollingElement or document.body, we use native
      * window.scrollTo method to scroll page.
      */
-    if (duration <= 0 || this._nativeSmoothScrollEnable(this._container)) {
+    if (duration <= 0 || this._nativeSmoothScrollEnabled(this._container)) {
       this._toY(targetY);
       if (callback) {
         callback();
