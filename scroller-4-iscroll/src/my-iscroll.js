@@ -4,8 +4,10 @@ import isBadAndroid from './utils/isBadAndroid';
 import getTime from './utils/getTime';
 import offsetUtils from './utils/offset';
 import getRect from './utils/getRect';
-import hasPointer from './utils/hasPointer';
+import { hasPointer, hasTouch } from './utils/detector';
 import getTouchAction from './utils/getTouchAction';
+import { addEvent, removeEvent } from './utils/eventHandler';
+import prefixPointerEvent from './utils/prefixPointerEvent';
 
 // deal with requestAnimationFrame compatbility
 var rAF = window.requestAnimationFrame ||
@@ -28,9 +30,14 @@ function Iscroll(elem, options) {
    */
   this.options = {
     disablePointer: !hasPointer,
+    disableTouch : hasPointer || !hasTouch,
+    disableMouse: hasPointer || !hasTouch,
     useTransition: true,
     useTransform: true,
     scrollY: true,
+		startX: 0,
+    startY: 0,
+    bindToWrapper: typeof window.onmousedown === "undefined"
   };
 
   for (var i in options) {
@@ -49,9 +56,56 @@ function Iscroll(elem, options) {
 
   this.x = 0;
   this.y = 0;
+
+  this._init();
+  this.refresh();
+  this.scrollTo(this.options.startX, this.options.startY);
 }
 
 Iscroll.prototype = {
+
+  _init: function () {
+    this._initEvents();
+  },
+
+  _initEvents: function (remove) {
+    var eventType = remove ? removeEvent : addEvent,
+      target = this.options.bindToWrapper ? this.wrapper : window;
+
+    eventType(window, 'orientationchange', this);
+    eventType(window, 'resize', this);
+
+    if ( this.options.click ) {
+      eventType(this.wrapper, 'click', this, true);
+    }
+
+    if ( !this.options.disableMouse ) {
+			eventType(this.wrapper, 'mousedown', this);
+			eventType(target, 'mousemove', this);
+			eventType(target, 'mousecancel', this);
+			eventType(target, 'mouseup', this);
+    }
+
+    if ( hasPointer && !this.options.disablePointer ) {
+			eventType(this.wrapper, utils.prefixPointerEvent('pointerdown'), this);
+			eventType(target, utils.prefixPointerEvent('pointermove'), this);
+			eventType(target, utils.prefixPointerEvent('pointercancel'), this);
+			eventType(target, utils.prefixPointerEvent('pointerup'), this);
+    }
+
+		if ( hasTouch && !this.options.disableTouch ) {
+			eventType(this.wrapper, 'touchstart', this);
+			eventType(target, 'touchmove', this);
+			eventType(target, 'touchcancel', this);
+			eventType(target, 'touchend', this);
+		}
+
+		eventType(this.scroller, 'transitionend', this);
+		eventType(this.scroller, 'webkitTransitionEnd', this);
+		eventType(this.scroller, 'oTransitionEnd', this);
+		eventType(this.scroller, 'MSTransitionEnd', this);
+  },
+
   scrollTo: function (x, y, time, easing) {
     easing = easing || easings.circular;
     this.isInTransition = this.options.useTransition && time > 0;
