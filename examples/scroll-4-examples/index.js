@@ -22,4 +22,9 @@ button.addEventListener('click', () => {
       }
     }
   });
+
+  setTimeout(() => {
+    console.log(111222);
+    iscroll.refresh()
+  },2500);
 });
