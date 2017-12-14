@@ -8,6 +8,8 @@ import { hasPointer, hasTouch } from './utils/detector';
 import getTouchAction from './utils/getTouchAction';
 import { addEvent, removeEvent } from './utils/eventHandler';
 import prefixPointerEvent from './utils/prefixPointerEvent';
+import eventType from './utils/eventType';
+import preventDefaultException from './utils/preventDefaultException'
 
 // deal with requestAnimationFrame compatbility
 var rAF = window.requestAnimationFrame ||
@@ -30,14 +32,20 @@ function Iscroll(elem, options) {
    */
   this.options = {
     disablePointer: !hasPointer,
-    disableTouch : hasPointer || !hasTouch,
+    disableTouch: hasPointer || !hasTouch,
     disableMouse: hasPointer || !hasTouch,
     useTransition: true,
     useTransform: true,
     scrollY: true,
-		startX: 0,
+    startX: 0,
     startY: 0,
-    bindToWrapper: typeof window.onmousedown === "undefined"
+    bindToWrapper: typeof window.onmousedown === "undefined",
+    preventDefault: true,
+    preventDefaultException: { tagName: /^(INPUT|TEXTAREA|BUTTON|SELECT)$/ },
+    directionLockThreshold: 5,
+		bounce: true,
+		bounceTime: 600,
+		bounceEasing: ''
   };
 
   for (var i in options) {
@@ -47,11 +55,14 @@ function Iscroll(elem, options) {
   this.options.eventPassthrough = this.options.eventPassthrough === true ? 'vertical' : this.options.eventPassthrough;
 
   // If you want eventPassthrough I have to lock one of the axes
-  this.options.scrollY = this.options.eventPassthrough == 'vertical' ? false : this.options.scrollY;
-  this.options.scrollX = this.options.eventPassthrough == 'horizontal' ? false : this.options.scrollX;
+  this.options.scrollY = this.options.eventPassthrough === 'vertical' ? false : this.options.scrollY;
+  this.options.scrollX = this.options.eventPassthrough === 'horizontal' ? false : this.options.scrollX;
 
-  this.options.bounceEasing = typeof this.options.bounceEasing == 'string' ? 
-    easings[this.options.bounceEasing] || easings.circular : 
+  this.options.freeScroll = this.options.freeScroll && !this.options.eventPassthrough;
+  this.options.directionLockThreshold = this.options.eventPassthrough ? 0 : this.options.directionLockThreshold;
+
+  this.options.bounceEasing = typeof this.options.bounceEasing == 'string' ?
+    easings[this.options.bounceEasing] || easings.circular :
     this.options.bounceEasing;
 
   this.x = 0;
@@ -60,6 +71,7 @@ function Iscroll(elem, options) {
   this._init();
   this.refresh();
   this.scrollTo(this.options.startX, this.options.startY);
+  this.enable();
 }
 
 Iscroll.prototype = {
@@ -75,35 +87,231 @@ Iscroll.prototype = {
     eventType(window, 'orientationchange', this);
     eventType(window, 'resize', this);
 
-    if ( this.options.click ) {
+    if (this.options.click) {
       eventType(this.wrapper, 'click', this, true);
     }
 
-    if ( !this.options.disableMouse ) {
-			eventType(this.wrapper, 'mousedown', this);
-			eventType(target, 'mousemove', this);
-			eventType(target, 'mousecancel', this);
-			eventType(target, 'mouseup', this);
+    if (!this.options.disableMouse) {
+      eventType(this.wrapper, 'mousedown', this);
+      eventType(target, 'mousemove', this);
+      eventType(target, 'mousecancel', this);
+      eventType(target, 'mouseup', this);
     }
 
-    if ( hasPointer && !this.options.disablePointer ) {
-			eventType(this.wrapper, utils.prefixPointerEvent('pointerdown'), this);
-			eventType(target, utils.prefixPointerEvent('pointermove'), this);
-			eventType(target, utils.prefixPointerEvent('pointercancel'), this);
-			eventType(target, utils.prefixPointerEvent('pointerup'), this);
+    if (hasPointer && !this.options.disablePointer) {
+      eventType(this.wrapper, prefixPointerEvent('pointerdown'), this);
+      eventType(target, prefixPointerEvent('pointermove'), this);
+      eventType(target, prefixPointerEvent('pointercancel'), this);
+      eventType(target, prefixPointerEvent('pointerup'), this);
     }
 
-		if ( hasTouch && !this.options.disableTouch ) {
-			eventType(this.wrapper, 'touchstart', this);
-			eventType(target, 'touchmove', this);
-			eventType(target, 'touchcancel', this);
-			eventType(target, 'touchend', this);
-		}
+    if (hasTouch && !this.options.disableTouch) {
+      eventType(this.wrapper, 'touchstart', this);
+      eventType(target, 'touchmove', this);
+      eventType(target, 'touchcancel', this);
+      eventType(target, 'touchend', this);
+    }
 
-		eventType(this.scroller, 'transitionend', this);
-		eventType(this.scroller, 'webkitTransitionEnd', this);
-		eventType(this.scroller, 'oTransitionEnd', this);
-		eventType(this.scroller, 'MSTransitionEnd', this);
+    eventType(this.scroller, 'transitionend', this);
+    eventType(this.scroller, 'webkitTransitionEnd', this);
+    eventType(this.scroller, 'oTransitionEnd', this);
+    eventType(this.scroller, 'MSTransitionEnd', this);
+  },
+
+  handleEvent: function (e) {
+    switch (e.type) {
+      case 'touchstart':
+      case 'pointerdown':
+      case 'MSPointerDown':
+      case 'mousedown':
+        this._start(e);
+        break;
+
+      case 'touchmove':
+      case 'pointermove':
+      case 'MSPointerMove':
+      case 'mousemove':
+        this._move(e);
+        break;
+    }
+  },
+
+  _start: function (e) {
+    console.log(e.type);
+    // React to left mouse button only
+    if (eventType[e.type] !== 1) { // not touch event
+      var button;
+      if (!e.which) {
+        /* IE case */
+        button = (e.button < 2) ? 0 :
+          ((e.button == 4) ? 1 : 2);
+      } else {
+        /* All others */
+        button = e.button;
+      }
+
+      // not left mouse button
+      if (button !== 0) {
+        return;
+      }
+    }
+
+    if (!this.enabled || (this.initiated && eventType[e.type] !== this.initiated)) {
+      return;
+    }
+
+    if (this.options.preventDefault && !isBadAndroid && !preventDefaultException(e.target, this.options.preventDefaultException)) {
+      e.preventDefault();
+    }
+
+    var point = e.touches ? e.touches[0] : e,
+      pos;
+
+    this.initiated = eventType[e.type];
+    this.moved = false;
+    this.distX = 0;
+    this.distY = 0;
+    this.directionX = 0;
+    this.directionY = 0;
+    this.directionLocked = 0;
+
+    this.startTime = getTime();
+
+    if (this.options.useTransition && this.isInTransition) {
+      this._transitionTime();
+      this.isInTransition = false;
+      pos = this.getComputedPosition();
+      this._translate(Math.round(pos.x), Math.round(pos.y));
+      // this._execEvent('scrollEnd');
+    } else if (!this.options.useTransition && this.isAnimating) {
+      this.isAnimating = false;
+      // this._execEvent('scrollEnd');
+    }
+
+    this.startX = this.x;
+    this.startY = this.y;
+    this.absStartX = this.x;
+    this.absStartY = this.y;
+    this.pointX = point.pageX;
+    this.pointY = point.pageY;
+
+    // this._execEvent('beforeScrollStart');
+  },
+
+  _move: function (e) {
+    if (!this.enabled || eventType[e.type] !== this.initiated) {
+      console.log(111);
+      return;
+    }
+
+    if (this.options.preventDefault) {	// increases performance on Android? TODO: check!
+      e.preventDefault();
+    }
+
+    var point = e.touches ? e.touches[0] : e,
+      deltaX = point.pageX - this.pointX, // the moved distance
+      deltaY = point.pageY - this.pointY,
+      timestamp = getTime(),
+      newX, newY,
+      absDistX, absDistY;
+
+    this.pointX = point.pageX;
+    this.pointY = point.pageY;
+
+    this.distX += deltaX;
+    this.distY += deltaY;
+    absDistX = Math.abs(this.distX); // absolute moved distance
+    absDistY = Math.abs(this.distY);
+
+    /**
+     *  We need to move at least 10 pixels for the scrolling to initiate
+     *  this.endTime is initiated in this.prototype.refresh method
+     */
+    if (timestamp - this.endTime > 300 && (absDistX < 10 && absDistY < 10)) {
+      console.log(222)
+      return;
+    }
+
+    // If you are scrolling in one direction lock the other
+    if (!this.directionLocked && !this.options.freeScroll) {
+
+      if (absDistX > absDistY + this.options.directionLockThreshold) {
+        this.directionLocked = 'h';		// lock horizontally
+      } else if (absDistY >= absDistX + this.options.directionLockThreshold) {
+        this.directionLocked = 'v';		// lock vertically
+      } else {
+        this.directionLocked = 'n';		// no lock
+      }
+
+    }
+
+    if (this.directionLocked == 'h') {
+      if (this.options.eventPassthrough == 'vertical') {
+        e.preventDefault();
+      } else if (this.options.eventPassthrough == 'horizontal') {
+        this.initiated = false;
+        return;
+      }
+
+      deltaY = 0;
+    } else if (this.directionLocked == 'v') {
+      if (this.options.eventPassthrough == 'horizontal') {
+        e.preventDefault();
+      } else if (this.options.eventPassthrough == 'vertical') {
+        this.initiated = false;
+        return;
+      }
+
+      deltaX = 0;
+    }
+    console.log(this.hasVerticalScroll, deltaY);
+		deltaX = this.hasHorizontalScroll ? deltaX : 0;
+    deltaY = this.hasVerticalScroll ? deltaY : 0;
+    
+		newX = this.x + deltaX;
+    newY = this.y + deltaY;
+    
+    // Slow down if outside of the boundaries
+    if ( newX > 0 || newX < this.maxScrollX ) {
+      newX = this.options.bounce ? this.x + deltaX / 3 : newX > 0 ? 0 : this.maxScrollX;
+    }
+		if ( newY > 0 || newY < this.maxScrollY ) {
+			newY = this.options.bounce ? this.y + deltaY / 3 : newY > 0 ? 0 : this.maxScrollY;
+    }
+    
+    this.directionX = deltaX > 0 ? -1 : deltaX < 0 ? 1 : 0;
+    this.directionY = deltaY > 0 ? -1 : deltaY < 0 ? 1 : 0;
+
+		if ( !this.moved ) {
+			// this._execEvent('scrollStart');
+    }
+    
+    this.moved = true;
+
+    this._translate(newX, newY);
+
+    if ( timestamp - this.startTime > 300 ) {
+      this.startTime = timestamp;
+			this.startX = this.x;
+			this.startY = this.y;
+    }
+  },
+
+  getComputedPosition: function () {
+    var matrix = window.getComputedStyle(this.scroller, null),
+      x, y;
+
+    if (this.options.useTransform) {
+      matrix = matrix[styleUtils.transform].split(')')[0].split(', ');
+      x = +(matrix[12] || matrix[4]);
+      y = +(matrix[13] || matrix[5]);
+    } else {
+      // eg. transform '0px' to 0
+      x = +matrix.left.replace(/[^-\d.]/g, '');
+      y = +matrix.top.replace(/[^-\d.]/g, '');
+    }
+
+    return { x: x, y: y };
   },
 
   scrollTo: function (x, y, time, easing) {
@@ -167,6 +375,7 @@ Iscroll.prototype = {
   },
 
   _translate: function (x, y) {
+    console.log('translate now!!: ', x,' ' , y);
     if (this.options.useTransform) {
 
       this.scrollerStyle[styleUtils.transform] =
@@ -273,30 +482,38 @@ Iscroll.prototype = {
   },
 
   resetPosition: function (time) {
-		var x = this.x,
-    y = this.y;
+    var x = this.x,
+      y = this.y;
 
     time = time || 0;
 
-    if ( !this.hasHorizontalScroll || this.x > 0 ) {
+    if (!this.hasHorizontalScroll || this.x > 0) {
       x = 0;
-    } else if ( this.x < this.maxScrollX ) {
+    } else if (this.x < this.maxScrollX) {
       x = this.maxScrollX;
     }
 
-    if ( !this.hasVerticalScroll || this.y > 0 ) {
+    if (!this.hasVerticalScroll || this.y > 0) {
       y = 0;
-    } else if ( this.y < this.maxScrollY ) {
+    } else if (this.y < this.maxScrollY) {
       y = this.maxScrollY;
     }
 
-		if ( x === this.x && y === this.y ) {
-			return false;
-		}
+    if (x === this.x && y === this.y) {
+      return false;
+    }
 
     this.scrollTo(x, y, time, this.options.bounceEasing);
 
     return true;
+  },
+
+  disable: function () {
+    this.enabled = false;
+  },
+
+  enable: function () {
+    this.enabled = true;
   }
 
 

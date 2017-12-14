@@ -1,10 +1,8 @@
-let container = document.querySelector('.container');
+let wrapper = document.querySelector('.wrapper');
 let elem = document.querySelector('.list-2');
 let button = document.querySelector('#scrollHandler');
 
-let iscroll = new Iscroll(container, {
-  useTransition: false
-});
+let iscroll = new Iscroll(wrapper);
 
 button.addEventListener('click', () => {
   // iscroll.scrollTo(0, 400, 2000);
