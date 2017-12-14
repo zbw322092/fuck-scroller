@@ -67,11 +67,13 @@ function Iscroll(elem, options) {
     easings[this.options.bounceEasing] || easings.circular :
     this.options.bounceEasing;
 
+  this.options.resizePolling = this.options.resizePolling === undefined ? 60 : this.options.resizePolling;
+
   this.x = 0;
   this.y = 0;
-	this.directionX = 0;
-	this.directionY = 0;
-	this._events = {};
+  this.directionX = 0;
+  this.directionY = 0;
+  this._events = {};
 
   this._init();
   this.refresh();
@@ -149,11 +151,21 @@ Iscroll.prototype = {
       case 'mousecancel':
         this._end(e);
         break;
+      case 'orientationchange':
+      case 'resize':
+        this._resize();
+        break;
+      case 'transitionend':
+      case 'webkitTransitionEnd':
+      case 'oTransitionEnd':
+      case 'MSTransitionEnd':
+        this._transitionEnd(e);
+        break;
     }
   },
 
   _start: function (e) {
-    console.log(e.type);
+    console.log('start event type: ', e.type);
     // React to left mouse button only
     if (eventType[e.type] !== 1) { // not touch event
       var button;
@@ -216,7 +228,7 @@ Iscroll.prototype = {
 
   _move: function (e) {
     if (!this.enabled || eventType[e.type] !== this.initiated) {
-      console.log(111);
+      console.log('do not move scroll');
       return;
     }
 
@@ -244,7 +256,7 @@ Iscroll.prototype = {
      *  this.endTime is initiated in this.prototype.refresh method
      */
     if (timestamp - this.endTime > 300 && (absDistX < 10 && absDistY < 10)) {
-      console.log(222)
+      console.log('less than 10 px');
       return;
     }
 
@@ -280,7 +292,7 @@ Iscroll.prototype = {
 
       deltaX = 0;
     }
-    console.log(this.hasVerticalScroll, deltaY);
+
     deltaX = this.hasHorizontalScroll ? deltaX : 0;
     deltaY = this.hasVerticalScroll ? deltaY : 0;
 
@@ -314,81 +326,104 @@ Iscroll.prototype = {
   },
 
   _end: function (e) {
-		if ( !this.enabled || eventType[e.type] !== this.initiated ) {
-			return;
+    if (!this.enabled || eventType[e.type] !== this.initiated) {
+      return;
     }
-    
-		if ( this.options.preventDefault && !preventDefaultException(e.target, this.options.preventDefaultException) ) {
-			e.preventDefault();
-    }
-    
-		var point = e.changedTouches ? e.changedTouches[0] : e,
-    momentumX,
-    momentumY,
-    duration = getTime() - this.startTime,
-    newX = Math.round(this.x),
-    newY = Math.round(this.y),
-    distanceX = Math.abs(newX - this.startX),
-    distanceY = Math.abs(newY - this.startY),
-    time = 0,
-    easing = '';
 
-		this.isInTransition = 0;
-		this.initiated = 0;
-    this.endTime = getTime();
-    
-		// reset if we are outside of the boundaries
-		if ( this.resetPosition(this.options.bounceTime) ) {
-			return;
+    if (this.options.preventDefault && !preventDefaultException(e.target, this.options.preventDefaultException)) {
+      e.preventDefault();
     }
-    
+
+    var point = e.changedTouches ? e.changedTouches[0] : e,
+      momentumX,
+      momentumY,
+      duration = getTime() - this.startTime,
+      newX = Math.round(this.x),
+      newY = Math.round(this.y),
+      distanceX = Math.abs(newX - this.startX),
+      distanceY = Math.abs(newY - this.startY),
+      time = 0,
+      easing = '';
+
+    this.isInTransition = 0;
+    this.initiated = 0;
+    this.endTime = getTime();
+
+    // reset if we are outside of the boundaries
+    if (this.resetPosition(this.options.bounceTime)) {
+      return;
+    }
+
     this.scrollTo(newX, newY);	// ensures that the last position is rounded
 
-		// we scrolled less than 10 pixels
-		if ( !this.moved ) {
-			if ( this.options.tap ) {
-				// utils.tap(e, this.options.tap);
-			}
+    // we scrolled less than 10 pixels
+    if (!this.moved) {
+      if (this.options.tap) {
+        // utils.tap(e, this.options.tap);
+      }
 
-			if ( this.options.click ) {
-				// utils.click(e);
-			}
+      if (this.options.click) {
+        // utils.click(e);
+      }
 
-			// this._execEvent('scrollCancel');
-			return;
+      // this._execEvent('scrollCancel');
+      return;
     }
 
-		if ( this._events.flick && duration < 200 && distanceX < 100 && distanceY < 100 ) {
-			// this._execEvent('flick');
-			return;
+    if (this._events.flick && duration < 200 && distanceX < 100 && distanceY < 100) {
+      // this._execEvent('flick');
+      return;
     }
-    
+
     // start momentum animation if needed
-    if ( this.options.momentum && duration < 300 ) {
-			momentumX = this.hasHorizontalScroll ? momentum(this.x, this.startX, duration, this.maxScrollX, this.options.bounce ? this.wrapperWidth : 0, this.options.deceleration) : { destination: newX, duration: 0 };
-			momentumY = this.hasVerticalScroll ? momentum(this.y, this.startY, duration, this.maxScrollY, this.options.bounce ? this.wrapperHeight : 0, this.options.deceleration) : { destination: newY, duration: 0 };
-			newX = momentumX.destination;
-			newY = momentumY.destination;
-			time = Math.max(momentumX.duration, momentumY.duration);
-			this.isInTransition = 1;
+    if (this.options.momentum && duration < 300) {
+      momentumX = this.hasHorizontalScroll ? momentum(this.x, this.startX, duration, this.maxScrollX, this.options.bounce ? this.wrapperWidth : 0, this.options.deceleration) : { destination: newX, duration: 0 };
+      momentumY = this.hasVerticalScroll ? momentum(this.y, this.startY, duration, this.maxScrollY, this.options.bounce ? this.wrapperHeight : 0, this.options.deceleration) : { destination: newY, duration: 0 };
+      newX = momentumX.destination;
+      newY = momentumY.destination;
+      time = Math.max(momentumX.duration, momentumY.duration);
+      this.isInTransition = 1;
     }
 
-    if ( this.options.snap ) {
+    if (this.options.snap) {
       // do someting
     }
 
-    if ( newX != this.x || newY != this.y ) {
+    if (newX != this.x || newY != this.y) {
       // change easing function when scroller goes out of the boundaries
-			if ( newX > 0 || newX < this.maxScrollX || newY > 0 || newY < this.maxScrollY ) {
-				easing = easings.quadratic;
+      if (newX > 0 || newX < this.maxScrollX || newY > 0 || newY < this.maxScrollY) {
+        easing = easings.quadratic;
       }
-      console.log('endendendend!');
-			this.scrollTo(newX, newY, time, easing);
-			return;
+      console.log('end end end end!');
+      this.scrollTo(newX, newY, time, easing);
+      return;
     }
 
     // this._execEvent('scrollEnd');
-    
+
+  },
+
+  _transitionEnd: function (e) {
+    if (e.target != this.scroller || !this.isInTransition) {
+      return;
+    }
+
+    this._transitionTime();
+    if (!this.resetPosition(this.options.bounceTime)) {
+      this.isInTransition = false;
+      // this._execEvent('scrollEnd');
+    }
+  },
+
+  _resize: function () {
+    var that = this;
+
+    clearTimeout(this.resizeTimeout);
+
+    this.resizeTimeout = setTimeout(function () {
+      console.log('resize now');
+      that.refresh();
+    }, this.options.resizePolling);
   },
 
   getComputedPosition: function () {

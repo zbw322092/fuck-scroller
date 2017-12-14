@@ -7,7 +7,6 @@ let iscroll = new Iscroll(wrapper, {
 });
 
 button.addEventListener('click', () => {
-  // iscroll.scrollTo(0, 400, 2000);
 
   iscroll.scrollTo(0, -400, 2000, {
     fn: function (k) {
