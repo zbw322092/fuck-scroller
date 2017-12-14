@@ -210,10 +210,10 @@ Iscroll.prototype = {
       this.isInTransition = false;
       pos = this.getComputedPosition();
       this._translate(Math.round(pos.x), Math.round(pos.y));
-      // this._execEvent('scrollEnd');
+      this._execEvent('scrollEnd');
     } else if (!this.options.useTransition && this.isAnimating) {
       this.isAnimating = false;
-      // this._execEvent('scrollEnd');
+      this._execEvent('scrollEnd');
     }
 
     this.startX = this.x;
@@ -223,7 +223,7 @@ Iscroll.prototype = {
     this.pointX = point.pageX;
     this.pointY = point.pageY;
 
-    // this._execEvent('beforeScrollStart');
+    this._execEvent('beforeScrollStart');
   },
 
   _move: function (e) {
@@ -311,7 +311,7 @@ Iscroll.prototype = {
     this.directionY = deltaY > 0 ? -1 : deltaY < 0 ? 1 : 0;
 
     if (!this.moved) {
-      // this._execEvent('scrollStart');
+      this._execEvent('scrollStart');
     }
 
     this.moved = true;
@@ -366,12 +366,12 @@ Iscroll.prototype = {
         // utils.click(e);
       }
 
-      // this._execEvent('scrollCancel');
+      this._execEvent('scrollCancel');
       return;
     }
 
     if (this._events.flick && duration < 200 && distanceX < 100 && distanceY < 100) {
-      // this._execEvent('flick');
+      this._execEvent('flick');
       return;
     }
 
@@ -399,7 +399,7 @@ Iscroll.prototype = {
       return;
     }
 
-    // this._execEvent('scrollEnd');
+    this._execEvent('scrollEnd');
 
   },
 
@@ -411,7 +411,7 @@ Iscroll.prototype = {
     this._transitionTime();
     if (!this.resetPosition(this.options.bounceTime)) {
       this.isInTransition = false;
-      // this._execEvent('scrollEnd');
+      this._execEvent('scrollEnd');
     }
   },
 
@@ -424,6 +424,44 @@ Iscroll.prototype = {
       console.log('resize now');
       that.refresh();
     }, this.options.resizePolling);
+  },
+
+	on: function (type, fn) {
+		if ( !this._events[type] ) {
+			this._events[type] = [];
+		}
+
+		this._events[type].push(fn);
+  },
+  
+	off: function (type, fn) {
+		if ( !this._events[type] ) {
+			return;
+		}
+
+		var index = this._events[type].indexOf(fn);
+
+		if ( index > -1 ) {
+			this._events[type].splice(index, 1);
+		}
+	},
+
+  _execEvent: function (type) {
+    if (!this._events[type]) {
+      return;
+    }
+
+    var i = 0,
+      l = this._events[type].length;
+
+    if (!l) {
+      return;
+    }
+
+		for ( ; i < l; i++ ) {
+			this._events[type][i].apply(this, [].slice.call(arguments, 1));
+		}
+
   },
 
   getComputedPosition: function () {
@@ -605,7 +643,7 @@ Iscroll.prototype = {
 
     this.wrapperOffset = offsetUtils(this.wrapper);
 
-    // this._execEvent('refresh');
+    this._execEvent('refresh');
 
     this.resetPosition();
   },
