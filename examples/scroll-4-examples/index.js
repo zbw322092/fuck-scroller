@@ -1,6 +1,8 @@
 let wrapper = document.querySelector('.wrapper');
 let elem = document.querySelector('.list-2');
 let button = document.querySelector('#scrollHandler');
+let scrollToElementbutton = document.querySelector('#scrollToElemetHandler');
+let element10 = document.querySelector('.list-10');
 
 let iscroll = new Iscroll(wrapper, {
   deceleration: 0.0003
@@ -25,4 +27,10 @@ button.addEventListener('click', () => {
   setTimeout(() => {
     iscroll.refresh()
   },2500);
+});
+
+
+scrollToElementbutton.addEventListener('click', () => {
+
+  iscroll.scrollToElement(element10);
 });

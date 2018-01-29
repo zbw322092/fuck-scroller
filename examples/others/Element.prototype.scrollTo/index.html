@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+
+<html lang="en-US">
+
+<head>
+  <title></title>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+  <div class="wrapper">
+    <div class="list list-0">0</div>
+    <div class="list list-1">1</div>
+    <div class="list list-2">2</div>
+    <div class="list list-3">3</div>
+    <div class="list list-4">4</div>
+    <div class="list list-5">5</div>
+    <div class="list list-6">6</div>
+    <div class="list list-7">7</div>
+    <div class="list list-8">8</div>
+    <div class="list list-9">9</div>
+  </div>
+
+  <button id="scrollIt">Scroll It</button>
+
+  <script>
+    var wrapper = document.querySelector('.wrapper');
+    var button = document.querySelector('#scrollIt');
+
+    button.addEventListener('click', (e) => {
+      console.log('aaa')
+      wrapper.scrollTo({
+        left: 0,
+        top: 200
+      });
+    });
+  </script>
+</body>
+
+</html>

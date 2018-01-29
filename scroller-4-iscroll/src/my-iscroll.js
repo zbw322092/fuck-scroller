@@ -301,9 +301,11 @@ Iscroll.prototype = {
 
     // Slow down if outside of the boundaries
     if (newX > 0 || newX < this.maxScrollX) {
+      console.log('xxxxxxxx');
       newX = this.options.bounce ? this.x + deltaX / 3 : newX > 0 ? 0 : this.maxScrollX;
     }
     if (newY > 0 || newY < this.maxScrollY) {
+      console.log('yyyyyyyy');
       newY = this.options.bounce ? this.y + deltaY / 3 : newY > 0 ? 0 : this.maxScrollY;
     }
 
@@ -316,6 +318,7 @@ Iscroll.prototype = {
 
     this.moved = true;
 
+    console.log('newX: ',newX, 'newY: ', newY);
     this._translate(newX, newY);
 
     if (timestamp - this.startTime > 300) {
@@ -506,6 +509,30 @@ Iscroll.prototype = {
     }
 
     var pos = offsetUtils(el);
+
+    pos.left -= this.wrapperOffset.left;
+    pos.top -= this.wrapperOffset.top;
+
+    // if offsetX/Y are true we center the element to the screen
+    var elRect = getRect(el);
+    var wrapperRect = getRect(this.wrapper);
+    if (offsetX === true) {
+      offsetX = Math.round(elRect.width / 2 - wrapperRect.width / 2);
+    }
+    if (offsetY === true) {
+      offsetY = Math.round(elRect.height / 2 - wrapperRect.height / 2);
+    }
+
+    pos.left -= offsetX || 0;
+    pos.top -= offsetY || 0;
+
+    pos.left = pos.left > 0 ? 0 : pos.left < this.maxScrollX ? this.maxScrollX : pos.left;
+    pos.top = pos.top > 0 ? 0 : pos.top < this.maxScrollY ? this.maxScrollY : pos.top;
+
+    time = time === undefined || time === null || time === 'auto' ? Math.max(Math.abs(this.x - pos.left), Math.abs(this.y - pos.top)) : time;
+
+    this.scrollTo(pos.left, pos.top, time, easing);
+
   },
 
   _transitionTimingFunction: function (easingStyle) {
